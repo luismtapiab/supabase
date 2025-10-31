@@ -1610,6 +1610,32 @@ export interface HomeAdvisorAskAssistantClickedEvent {
 }
 
 /**
+ * User was exposed to the realtime experiment (shown or not shown the Enable Realtime button).
+ *
+ * @group Events
+ * @source studio
+ * @page /dashboard/project/{ref}/editor
+ */
+export interface RealtimeExperimentExposedEvent {
+  action: 'realtime_experiment_exposed'
+  properties: {
+    /**
+     * The experiment variant shown to the user
+     */
+    variant: 'control' | 'hide_enable_button'
+    /**
+     * Whether the table already has realtime enabled
+     */
+    table_has_realtime_enabled: boolean
+    /**
+     * Days since project creation (to segment by new user cohorts)
+     */
+    days_since_project_creation: number
+  }
+  groups: TelemetryGroups
+}
+
+/**
  * User clicked on an issue card in the Advisor section of HomeV2.
  *
  * @group Events
@@ -2178,6 +2204,7 @@ export type TelemetryEvent =
   | HomeAdvisorAskAssistantClickedEvent
   | HomeAdvisorIssueCardClickedEvent
   | HomeAdvisorFixIssueClickedEvent
+  | RealtimeExperimentExposedEvent
   | HomeProjectUsageServiceClickedEvent
   | HomeProjectUsageChartClickedEvent
   | HomeCustomReportBlockAddedEvent

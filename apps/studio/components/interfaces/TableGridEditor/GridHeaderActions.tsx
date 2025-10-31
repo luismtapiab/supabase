@@ -1,7 +1,7 @@
 import { PermissionAction } from '@supabase/shared-types/out/constants'
 import { Lock, MousePointer2, PlusCircle, Unlock } from 'lucide-react'
 import Link from 'next/link'
-import { useMemo, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 import { useParams, useFlag } from 'common'
@@ -75,6 +75,8 @@ export const GridHeaderActions = ({ table, isRefetching }: GridHeaderActionsProp
   const hideRealtimeButton = usePHFlag<boolean>('hideRealtimeButton')
   const { realtimeAll: realtimeEnabled } = useIsFeatureEnabled(['realtime:all'])
   const { isSchemaLocked } = useIsProtectedSchema({ schema: table.schema })
+
+  const hasTrackedExposure = useRef(false)
 
   const { mutate: updateTable } = useTableUpdateMutation({
     onError: (error) => {
@@ -175,6 +177,29 @@ export const GridHeaderActions = ({ table, isRefetching }: GridHeaderActionsProp
     )
 
   const manageTriggersHref = `/project/${ref}/database/triggers?schema=${table.schema}`
+
+  // Track exposure to the realtime experiment
+  useEffect(() => {
+    if (
+      !hasTrackedExposure.current &&
+      project &&
+      org &&
+      isTable &&
+      hideRealtimeButton !== undefined
+    ) {
+      hasTrackedExposure.current = true
+
+      const daysSinceCreation = Math.floor(
+        (Date.now() - new Date(project.inserted_at).getTime()) / (1000 * 60 * 60 * 24)
+      )
+
+      track('realtime_experiment_exposed', {
+        variant: hideRealtimeButton ? 'hide_enable_button' : 'control',
+        table_has_realtime_enabled: isRealtimeEnabled,
+        days_since_project_creation: daysSinceCreation,
+      })
+    }
+  }, [hideRealtimeButton, project, org, isTable, isRealtimeEnabled, track])
 
   const toggleRealtime = async () => {
     if (!project) return console.error('Project is required')
