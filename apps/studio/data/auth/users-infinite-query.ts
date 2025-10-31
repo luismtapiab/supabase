@@ -1,5 +1,5 @@
 import { getPaginatedUsersSQL } from '@supabase/pg-meta/src/sql/studio/get-users-paginated'
-import { useInfiniteQuery } from '@tanstack/react-query'
+import { InfiniteData, useInfiniteQuery } from '@tanstack/react-query'
 
 import type { components } from 'data/api'
 import { executeSql, ExecuteSqlError } from 'data/sql/execute-sql-query'
@@ -39,12 +39,21 @@ export const useUsersInfiniteQuery = <TData = UsersData>(
     order,
     column,
   }: UsersVariables,
-  { enabled = true, ...options }: UseCustomInfiniteQueryOptions<UsersData, UsersError, TData> = {}
+  {
+    enabled = true,
+    ...options
+  }: UseCustomInfiniteQueryOptions<
+    UsersData,
+    UsersError,
+    InfiniteData<TData>,
+    readonly unknown[],
+    string | number | undefined
+  > = {}
 ) => {
   const { data: project } = useSelectedProjectQuery()
   const isActive = project?.status === PROJECT_STATUS.ACTIVE_HEALTHY
 
-  return useInfiniteQuery<UsersData, UsersError, TData>({
+  return useInfiniteQuery({
     queryKey: authKeys.usersInfinite(projectRef, { keywords, filter, providers, sort, order }),
     queryFn: ({ signal, pageParam }) => {
       return executeSql(
@@ -52,7 +61,7 @@ export const useUsersInfiniteQuery = <TData = UsersData>(
           projectRef,
           connectionString,
           sql: getPaginatedUsersSQL({
-            page: column ? undefined : pageParam,
+            page: column ? undefined : (pageParam as number),
             verified: filter,
             keywords,
             providers,
@@ -60,7 +69,7 @@ export const useUsersInfiniteQuery = <TData = UsersData>(
             order: order ?? 'asc',
             limit: USERS_PAGE_LIMIT,
             column,
-            startAt: column ? pageParam : undefined,
+            startAt: column ? (pageParam as string) : undefined,
           }),
           queryKey: authKeys.usersInfinite(projectRef),
         },
@@ -68,6 +77,7 @@ export const useUsersInfiniteQuery = <TData = UsersData>(
       )
     },
     enabled: enabled && typeof projectRef !== 'undefined' && isActive,
+    initialPageParam: undefined,
     getNextPageParam(lastPage, pages) {
       const hasNextPage = lastPage.result.length >= USERS_PAGE_LIMIT
       if (column) {
